@@ -18,6 +18,9 @@
       "source.organizeImports.biome": "explicit"
     },
     "editor.formatOnSave": true,
+    "cSpell.words": [
+      "devstage"
+    ],
 
 
   
