@@ -1,8 +1,12 @@
 import { IconButton } from '@/components/icon-button'
 import { InputField, InputIcon, InputRoot } from '@/components/input'
-import { Copy, Link } from 'lucide-react'
+import { BadgeCheck, Copy, Link, Medal, MousePointerClick } from 'lucide-react'
 import Image from 'next/image'
+
 import logo from '../../assets/Logo.svg'
+import cooper from '../../assets/medal-cooper.svg'
+import gold from '../../assets/medal-gold.svg'
+import silver from '../../assets/medal-silver.svg'
 
 export default function InvitePage() {
   return (
@@ -46,39 +50,40 @@ export default function InvitePage() {
           </InputRoot>
 
           <div className="grid gap-3 md:grid-cols-3 mt-4">
-            <div className="bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
+            <div className="relative bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
               <span className="font-heading text-2xl font-semibold text-gray-200 leading-none">
                 1042
               </span>
               <span className="text-sm text-gray-300 leading-none text-center">
                 Acesso ao Link
               </span>
+              <MousePointerClick className="size-5 text-purple absolute top-3 left-3" />
             </div>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-3 mt-4">
-            <div className="bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
+            <div className="relative bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
               <span className="font-heading text-2xl font-semibold text-gray-200 leading-none">
                 1042
               </span>
               <span className="text-sm text-gray-300 leading-none text-center">
                 Inscrições feitas
               </span>
+              <BadgeCheck className="size-5 text-purple absolute top-3 left-3" />
             </div>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-3 mt-4">
-            <div className="bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
+            <div className="relative bg-gray-700 border-gray-600 px-4 py-7 flex flex-col items-center justify-center gap-1 rounded-xl">
               <span className="font-heading text-2xl font-semibold text-gray-200 leading-none">
-                1042
+                3º
               </span>
               <span className="text-sm text-gray-300 leading-none text-center">
-                Acesso ao Link
+                Posição no Ranking
               </span>
+              <Medal className="size-5 text-purple absolute top-3 left-3" />
             </div>
           </div>
         </div>
       </div>
+
+      <div className="w-full max-w-[550px]"></div>
     </div>
   )
 }
