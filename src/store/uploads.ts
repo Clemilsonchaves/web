@@ -10,7 +10,7 @@ type UploadState = {
     addUploads: (files: File[]) => void
 }
 
-export const useUploads = create<UploadState>((set) => {
+export const useUploads = create<UploadState>((set, get) => {
     function addUploads(files: File[]) {
         for (const file of files) {
             const uploadId = crypto.randomUUID();
