@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  AWS_S3_BUCKET_STATIC: rocketseat-upload-widget-web-statics
+  AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
   AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-cdn
   SOURCE_DIST: ./dist
 
