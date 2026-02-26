@@ -5,7 +5,7 @@
       "Sid": "AllowGithubActionsDeploy",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::123456789012:user/github-actions-deploy"
+        "AWS": "arn:aws:iam::730335447294:root"
       },
       "Action": [
         "s3:PutObject",
@@ -19,7 +19,7 @@
       "Sid": "AllowGithubActionsListBucket",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::123456789012:user/github-actions-deploy"
+        "AWS": "arn:aws:iam::730335447294:root"
       },
       "Action": [
         "s3:ListBucket"
