@@ -55,6 +55,27 @@ jobs:
             aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*"
           fi
 
+      - name: Validate CDN bucket permissions
+        id: validate-cdn-permissions
+        run: |
+          set -e
+          aws sts get-caller-identity
+          echo "ci-probe" > /tmp/cdn-permission-probe.txt
+
+          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
+            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt --sse aws:kms --ssekms-key-id "${{ vars.AWS_KMS_KEY_ID }}" > /dev/null; then
+              echo "::error::Sem permissao para PutObject (ou KMS) no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/* e, se usar KMS, kms:Encrypt/kms:GenerateDataKey na chave configurada."
+              exit 1
+            fi
+          else
+            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt > /dev/null; then
+              echo "::error::Sem permissao para PutObject no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/*."
+              exit 1
+            fi
+          fi
+
+          aws s3api delete-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe > /dev/null || true
+
       - name: Sync to S3 CDN
         id: sync-files-to-s3-cdn
         run: |
