@@ -49,9 +49,17 @@ jobs:
       - name: Sync to S3 statics
         id: sync-files-to-s3-statics
         run: |
-          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete  --exclude "*.git*"
+          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
+            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
+          else
+            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*"
+          fi
 
       - name: Sync to S3 CDN
         id: sync-files-to-s3-cdn
         run: |
-          aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*"
+          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
+            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
+          else
+            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*"
+          fi
