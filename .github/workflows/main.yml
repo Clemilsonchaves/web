@@ -52,7 +52,7 @@ jobs:
           if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
             aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
           else
-            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*"
+            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*" --sse AES256
           fi
 
       - name: Validate CDN bucket permissions
@@ -68,8 +68,8 @@ jobs:
               exit 1
             fi
           else
-            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt > /dev/null; then
-              echo "::error::Sem permissao para PutObject no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/*."
+            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt --server-side-encryption AES256 > /dev/null; then
+              echo "::error::Sem permissao para PutObject no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/* e, se o bucket exigir criptografia, permita AES256 ou configure AWS_KMS_KEY_ID com permissoes KMS."
               exit 1
             fi
           fi
@@ -82,5 +82,5 @@ jobs:
           if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
             aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
           else
-            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*"
+            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*" --sse AES256
           fi
