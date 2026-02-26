@@ -7,41 +7,33 @@ on:
 
 env:
   AWS_S3_BUCKET_STATICS: ${{ vars.AWS_S3_BUCKET_STATICS }}
-  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}      
+  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}
   SOURCE_DIST: ./dist
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # If vars are environment-scoped, uncomment:
+    # environment: production
+
     steps:
       - name: Checkout
-        id: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure node
-        id: configure-node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        id: install-pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
+          cache: npm
 
       - name: Install dependencies
-        id: install-dependencies
-        run: |
-          pnpm install
+        run: npm ci
 
       - name: Build app
-        id: build-app
         run: |
           pnpm run build
 
       - name: Configure AWS credentials
-        id: configure-aws-credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -49,31 +41,35 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Validate deploy variables
-        id: validate-deploy-vars
         run: |
           set -e
-          if [ -z "${{ env.AWS_S3_BUCKET_STATICS }}" ]; then
+          STATIC_BUCKET="${{ env.AWS_S3_BUCKET_STATICS }}"
+          CDN_BUCKET="${{ env.AWS_S3_BUCKET_CDN }}"
+
+          if [ -z "$STATIC_BUCKET" ]; then
             echo "::error::Variavel AWS_S3_BUCKET_STATICS nao configurada em Repository Variables."
             exit 1
           fi
 
-          if echo "${{ env.AWS_S3_BUCKET_STATICS }}" | grep -q '^arn:'; then
-            echo "::error::AWS_S3_BUCKET_STATICS deve conter apenas o nome do bucket (ex: meu-bucket), nao um ARN."
-            exit 1
+          if echo "$STATIC_BUCKET" | grep -q '^arn:aws:s3:::'; then
+            STATIC_BUCKET="${STATIC_BUCKET#arn:aws:s3:::}"
+            STATIC_BUCKET="${STATIC_BUCKET%/}"
+            echo "::warning::AWS_S3_BUCKET_STATICS foi informado como ARN; usando bucket '$STATIC_BUCKET'."
+            echo "AWS_S3_BUCKET_STATICS=$STATIC_BUCKET" >> $GITHUB_ENV
           fi
 
-          if [ -n "${{ env.AWS_S3_BUCKET_CDN }}" ] && echo "${{ env.AWS_S3_BUCKET_CDN }}" | grep -q '^arn:'; then
-            echo "::warning::AWS_S3_BUCKET_CDN esta como ARN; informe apenas o nome do bucket para habilitar deploy de CDN. Etapa de CDN sera ignorada."
-            echo "AWS_S3_BUCKET_CDN=" >> $GITHUB_ENV
+          if [ -n "$CDN_BUCKET" ] && echo "$CDN_BUCKET" | grep -q '^arn:aws:s3:::'; then
+            CDN_BUCKET="${CDN_BUCKET#arn:aws:s3:::}"
+            CDN_BUCKET="${CDN_BUCKET%/}"
+            echo "::warning::AWS_S3_BUCKET_CDN foi informado como ARN; usando bucket '$CDN_BUCKET'."
+            echo "AWS_S3_BUCKET_CDN=$CDN_BUCKET" >> $GITHUB_ENV
           fi
 
       - name: Sync files to S3 static
-        id: sync-files-to-s3-statics
         run: |
           aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
 
       - name: Sync files to S3 CDN
-        id: sync-files-to-s3-cdn
         run: |
           if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
             echo "::warning::Variavel AWS_S3_BUCKET_CDN nao configurada. Etapa de CDN sera ignorada."
