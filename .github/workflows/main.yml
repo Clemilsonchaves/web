@@ -6,8 +6,8 @@ on:
       - main
 
 env:
-  AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
-  AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-cdn
+  AWS_S3_BUCKET_STATICS: ${{ vars.AWS_S3_BUCKET_STATICS }}
+  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}
   SOURCE_DIST: ./dist
 
 jobs:
@@ -47,6 +47,20 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Validate deploy variables
+        id: validate-deploy-vars
+        run: |
+          set -e
+          if [ -z "${{ env.AWS_S3_BUCKET_STATICS }}" ]; then
+            echo "::error::Variavel AWS_S3_BUCKET_STATICS nao configurada em Repository Variables."
+            exit 1
+          fi
+
+          if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
+            echo "::error::Variavel AWS_S3_BUCKET_CDN nao configurada em Repository Variables."
+            exit 1
+          fi
 
       - name: Sync files to S3 static
         id: sync-files-to-s3-statics
