@@ -57,6 +57,16 @@ jobs:
             exit 1
           fi
 
+          if echo "${{ env.AWS_S3_BUCKET_STATICS }}" | grep -q '^arn:'; then
+            echo "::error::AWS_S3_BUCKET_STATICS deve conter apenas o nome do bucket (ex: meu-bucket), nao um ARN."
+            exit 1
+          fi
+
+          if [ -n "${{ env.AWS_S3_BUCKET_CDN }}" ] && echo "${{ env.AWS_S3_BUCKET_CDN }}" | grep -q '^arn:'; then
+            echo "::warning::AWS_S3_BUCKET_CDN esta como ARN; informe apenas o nome do bucket para habilitar deploy de CDN. Etapa de CDN sera ignorada."
+            echo "AWS_S3_BUCKET_CDN=" >> $GITHUB_ENV
+          fi
+
       - name: Sync files to S3 static
         id: sync-files-to-s3-statics
         run: |
