@@ -70,7 +70,23 @@ jobs:
 
       - name: Sync files to S3 static
         run: |
-          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
+          set +e
+          OUTPUT=$(aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' 2>&1)
+          STATUS=$?
+          set -e
+
+          if [ $STATUS -ne 0 ]; then
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ListObjectsV2" && echo "$OUTPUT" | grep -q "AccessDenied"; then
+              echo "::warning::Sem permissao de ListBucket no bucket static (${{ env.AWS_S3_BUCKET_STATICS }}). Fallback para upload sem listagem."
+              aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*'
+              exit 0
+            fi
+
+            exit $STATUS
+          fi
+
+          echo "$OUTPUT"
 
       - name: Sync files to S3 CDN
         run: |
