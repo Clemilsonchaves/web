@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_S3_BUCKET_STATICS: ${{ vars.AWS_S3_BUCKET_STATICS }}
-  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}
+  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}      
   SOURCE_DIST: ./dist
 
 jobs:
