@@ -71,7 +71,7 @@ jobs:
       - name: Sync files to S3 static
         run: |
           set +e
-          OUTPUT=$(aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' 2>&1)
+          OUTPUT=$(aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' --sse AES256 2>&1)
           STATUS=$?
           set -e
 
@@ -79,7 +79,7 @@ jobs:
             echo "$OUTPUT"
             if echo "$OUTPUT" | grep -q "ListObjectsV2" && echo "$OUTPUT" | grep -q "AccessDenied"; then
               echo "::warning::Sem permissao de ListBucket no bucket static (${{ env.AWS_S3_BUCKET_STATICS }}). Fallback para upload sem listagem."
-              aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*'
+              aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*' --sse AES256
               exit 0
             fi
 
@@ -96,7 +96,7 @@ jobs:
           fi
 
           set +e
-          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' 2>&1)
+          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' --sse AES256 2>&1)
           STATUS=$?
           set -e
 
