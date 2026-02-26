@@ -57,11 +57,6 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
-            echo "::error::Variavel AWS_S3_BUCKET_CDN nao configurada em Repository Variables."
-            exit 1
-          fi
-
       - name: Sync files to S3 static
         id: sync-files-to-s3-statics
         run: |
@@ -70,4 +65,24 @@ jobs:
       - name: Sync files to S3 CDN
         id: sync-files-to-s3-cdn
         run: |
-          aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*'
+          if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
+            echo "::warning::Variavel AWS_S3_BUCKET_CDN nao configurada. Etapa de CDN sera ignorada."
+            exit 0
+          fi
+
+          set +e
+          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' 2>&1)
+          STATUS=$?
+          set -e
+
+          if [ $STATUS -ne 0 ]; then
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "AccessDenied"; then
+              echo "::warning::Sem permissao para upload no bucket CDN (${{ env.AWS_S3_BUCKET_CDN }}). Deploy do bucket static concluido; etapa CDN ignorada."
+              exit 0
+            fi
+
+            exit $STATUS
+          fi
+
+          echo "$OUTPUT"
