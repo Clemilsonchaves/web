@@ -6,9 +6,9 @@ on:
       - main
 
 env:
-  AWS_S3_BUCKET_STATICS: ${{ vars.AWS_S3_BUCKET_STATICS }}
-  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}
-  SOURCE_DIST: "./dist"
+  AWS_S3_BUCKET_STATIC: rocketseat-upload-widget-web-statics
+  AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-cdn
+  SOURCE_DIST: ./dist
 
 jobs:
   deploy:
@@ -16,17 +16,19 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Configure node
         id: configure-node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: 20
 
       - name: Install pnpm
         id: install-pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
 
       - name: Install dependencies
         id: install-dependencies
@@ -46,61 +48,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Validate required deploy variables
-        id: validate-deploy-vars
-        run: |
-          set -e
-
-          if [ -z "${{ env.AWS_S3_BUCKET_STATICS }}" ]; then
-            echo "::error::Variavel AWS_S3_BUCKET_STATICS nao configurada (Repository Variables)."
-            exit 1
-          fi
-
-          if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
-            echo "::error::Variavel AWS_S3_BUCKET_CDN nao configurada (Repository Variables)."
-            exit 1
-          fi
-
-          if [ "${{ env.AWS_S3_BUCKET_STATICS }}" = "rocketseat-upload-widget-web-statics" ] || [ "${{ env.AWS_S3_BUCKET_CDN }}" = "rocketseat-upload-widget-web-cdn" ]; then
-            echo "::error::Buckets padrao de exemplo detectados. Configure buckets da sua conta em AWS_S3_BUCKET_STATICS e AWS_S3_BUCKET_CDN."
-            exit 1
-          fi
-
-      - name: Sync to S3 statics
+      - name: Sync files to S3 static
         id: sync-files-to-s3-statics
         run: |
-          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
-            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
-          else
-            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude "*.git*" --sse aws:kms
-          fi
+          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
 
-      - name: Validate CDN bucket permissions
-        id: validate-cdn-permissions
-        run: |
-          set -e
-          aws sts get-caller-identity
-          echo "ci-probe" > /tmp/cdn-permission-probe.txt
-
-          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
-            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt --sse aws:kms --ssekms-key-id "${{ vars.AWS_KMS_KEY_ID }}" > /dev/null; then
-              echo "::error::Sem permissao para PutObject (ou KMS) no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/* e, se usar KMS, kms:Encrypt/kms:GenerateDataKey na chave configurada."
-              exit 1
-            fi
-          else
-            if ! aws s3api put-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe --body /tmp/cdn-permission-probe.txt --server-side-encryption aws:kms > /dev/null; then
-              echo "::error::Sem permissao para PutObject no bucket ${{ env.AWS_S3_BUCKET_CDN }}. Garanta s3:PutObject em arn:aws:s3:::${{ env.AWS_S3_BUCKET_CDN }}/* e permissao KMS (kms:Encrypt/kms:GenerateDataKey). Se exigir chave especifica, configure AWS_KMS_KEY_ID."
-              exit 1
-            fi
-          fi
-
-          aws s3api delete-object --bucket ${{ env.AWS_S3_BUCKET_CDN }} --key .ci-permission-probe > /dev/null || true
-
-      - name: Sync to S3 CDN
+      - name: Sync files to S3 CDN
         id: sync-files-to-s3-cdn
         run: |
-          if [ -n "${{ vars.AWS_KMS_KEY_ID }}" ]; then
-            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*" --sse aws:kms --sse-kms-key-id "${{ vars.AWS_KMS_KEY_ID }}"
-          else
-            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude "*.git*" --sse aws:kms
-          fi
+          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --delete --exclude '.*git*'
