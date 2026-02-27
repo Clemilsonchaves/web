@@ -1,0 +1,82 @@
+{
+  "identityDetected": {
+    "accountId": "730335447294",
+    "currentPrincipalArn": "arn:aws:iam::730335447294:root",
+    "note": "V2 usa principal dedicado para CI (recomendado)."
+  },
+  "principalTemplates": {
+    "roleArnExample": "arn:aws:iam::730335447294:role/github-actions-deploy",
+    "userArnExample": "arn:aws:iam::730335447294:user/github-actions-deploy"
+  },
+  "selectedPrincipalArn": "arn:aws:iam::730335447294:role/github-actions-deploy",
+  "iamPolicyForDeployPrincipal": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ListBucketsForSyncDelete",
+        "Effect": "Allow",
+        "Action": ["s3:ListBucket"],
+        "Resource": [
+          "arn:aws:s3:::rocketseat-upload-widget-web-cdn",
+          "arn:aws:s3:::rocketseat-upload-widget-web-statics"
+        ]
+      },
+      {
+        "Sid": "ObjectCrudForDeploy",
+        "Effect": "Allow",
+        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+        "Resource": [
+          "arn:aws:s3:::rocketseat-upload-widget-web-cdn/*",
+          "arn:aws:s3:::rocketseat-upload-widget-web-statics/*"
+        ]
+      }
+    ]
+  },
+  "bucketPolicyForCdn": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "AllowDeployListCdn",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::730335447294:role/github-actions-deploy"
+        },
+        "Action": ["s3:ListBucket"],
+        "Resource": "arn:aws:s3:::rocketseat-upload-widget-web-cdn"
+      },
+      {
+        "Sid": "AllowDeployObjectsCdn",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::730335447294:role/github-actions-deploy"
+        },
+        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+        "Resource": "arn:aws:s3:::rocketseat-upload-widget-web-cdn/*"
+      }
+    ]
+  },
+  "bucketPolicyForStatics": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "AllowDeployListStatics",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::730335447294:role/github-actions-deploy"
+        },
+        "Action": ["s3:ListBucket"],
+        "Resource": "arn:aws:s3:::rocketseat-upload-widget-web-statics"
+      },
+      {
+        "Sid": "AllowDeployObjectsStatics",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::730335447294:role/github-actions-deploy"
+        },
+        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+        "Resource": "arn:aws:s3:::rocketseat-upload-widget-web-statics/*"
+      }
+    ]
+  },
+  "nextStep": "Substitua github-actions-deploy pelo nome real da role/user e aplique as policies."
+}
