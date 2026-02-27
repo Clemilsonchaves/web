@@ -68,25 +68,68 @@ jobs:
             echo "AWS_S3_BUCKET_CDN=$CDN_BUCKET" >> $GITHUB_ENV
           fi
 
-      - name: Sync files to S3 static
+      - name: Validate S3 permissions (static)
         run: |
+          set -e
+          STATIC_BUCKET="${{ env.AWS_S3_BUCKET_STATICS }}"
+          TEST_KEY="__deploy_permission_check_$(date +%s).txt"
+          TEST_FILE="/tmp/s3-permission-check.txt"
+
+          echo "permission-check" > "$TEST_FILE"
+
           set +e
-          OUTPUT=$(aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' --sse AES256 2>&1)
-          STATUS=$?
+          LIST_OUTPUT=$(aws s3api list-objects-v2 --bucket "$STATIC_BUCKET" --max-items 1 2>&1)
+          LIST_STATUS=$?
           set -e
 
-          if [ $STATUS -ne 0 ]; then
-            echo "$OUTPUT"
-            if echo "$OUTPUT" | grep -q "ListObjectsV2" && echo "$OUTPUT" | grep -q "AccessDenied"; then
-              echo "::warning::Sem permissao de ListBucket no bucket static (${{ env.AWS_S3_BUCKET_STATICS }}). Fallback para upload sem listagem."
-              aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*' --sse AES256
-              exit 0
+          if [ $LIST_STATUS -ne 0 ]; then
+            if echo "$LIST_OUTPUT" | grep -q "AccessDenied"; then
+              echo "::warning::Sem permissao de ListBucket no bucket static ($STATIC_BUCKET). O deploy seguira em modo sem --delete."
+              echo "HAS_LIST_BUCKET_STATIC=false" >> $GITHUB_ENV
+            else
+              echo "$LIST_OUTPUT"
+              exit $LIST_STATUS
             fi
-
-            exit $STATUS
+          else
+            echo "HAS_LIST_BUCKET_STATIC=true" >> $GITHUB_ENV
           fi
 
-          echo "$OUTPUT"
+          set +e
+          PUT_OUTPUT=$(aws s3 cp "$TEST_FILE" "s3://$STATIC_BUCKET/$TEST_KEY" --sse AES256 2>&1)
+          PUT_STATUS=$?
+          set -e
+
+          if [ $PUT_STATUS -ne 0 ]; then
+            echo "$PUT_OUTPUT"
+            if echo "$PUT_OUTPUT" | grep -q "AccessDenied"; then
+              echo "::error::Sem permissao de PutObject no bucket static ($STATIC_BUCKET)."
+              echo "::error::Conceda s3:PutObject em arn:aws:s3:::$STATIC_BUCKET/* e, se aplicavel, permissoes KMS (kms:Encrypt/kms:Decrypt/kms:GenerateDataKey)."
+            fi
+            exit $PUT_STATUS
+          fi
+
+          set +e
+          DELETE_OUTPUT=$(aws s3api delete-object --bucket "$STATIC_BUCKET" --key "$TEST_KEY" 2>&1)
+          DELETE_STATUS=$?
+          set -e
+
+          if [ $DELETE_STATUS -ne 0 ]; then
+            echo "$DELETE_OUTPUT"
+            if echo "$DELETE_OUTPUT" | grep -q "AccessDenied"; then
+              echo "::error::Sem permissao de DeleteObject no bucket static ($STATIC_BUCKET)."
+              echo "::error::Conceda s3:DeleteObject em arn:aws:s3:::$STATIC_BUCKET/* para permitir deploy com limpeza de objetos antigos."
+            fi
+            exit $DELETE_STATUS
+          fi
+
+      - name: Sync files to S3 static
+        run: |
+          if [ "$HAS_LIST_BUCKET_STATIC" = "true" ]; then
+            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' --sse AES256
+          else
+            echo "::warning::Executando deploy sem --delete por falta de ListBucket."
+            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*' --sse AES256
+          fi
 
       - name: Sync files to S3 CDN
         run: |
