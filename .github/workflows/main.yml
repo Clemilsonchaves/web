@@ -95,7 +95,7 @@ jobs:
           fi
 
           set +e
-          PUT_OUTPUT=$(aws s3 cp "$TEST_FILE" "s3://$STATIC_BUCKET/$TEST_KEY" --sse AES256 2>&1)
+          PUT_OUTPUT=$(aws s3 cp "$TEST_FILE" "s3://$STATIC_BUCKET/$TEST_KEY" 2>&1)
           PUT_STATUS=$?
           set -e
 
@@ -125,10 +125,10 @@ jobs:
       - name: Sync files to S3 static
         run: |
           if [ "$HAS_LIST_BUCKET_STATIC" = "true" ]; then
-            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*' --sse AES256
+            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
           else
             echo "::warning::Executando deploy sem --delete por falta de ListBucket."
-            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*' --sse AES256
+            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*'
           fi
 
       - name: Sync files to S3 CDN
@@ -139,7 +139,7 @@ jobs:
           fi
 
           set +e
-          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' --sse AES256 2>&1)
+          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' 2>&1)
           STATUS=$?
           set -e
 
