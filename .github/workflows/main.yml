@@ -27,8 +27,6 @@ jobs:
       - name: Install pnpm
         id: install-pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install dependencies
         id: install-dependencies
