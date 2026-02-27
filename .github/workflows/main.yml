@@ -6,151 +6,54 @@ on:
       - main
 
 env:
-  AWS_S3_BUCKET_STATICS: ${{ vars.AWS_S3_BUCKET_STATICS }}
-  AWS_S3_BUCKET_CDN: ${{ vars.AWS_S3_BUCKET_CDN }}
+  AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
+  AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-cdn
   SOURCE_DIST: ./dist
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # If vars are environment-scoped, uncomment:
-    # environment: production
-
     steps:
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-
       - name: Configure node
+        id: configure-node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+
+      - name: Install pnpm
+        id: install-pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        id: install-dependencies
+        run: |
+          pnpm install
 
       - name: Build app
+        id: build-app
         run: |
           pnpm run build
 
       - name: Configure AWS credentials
+        id: configure-aws-credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Validate deploy variables
+      - name: Sync files to S3 statics
+        id: sync-files-to-s3-statics
         run: |
-          set -e
-          STATIC_BUCKET="${{ env.AWS_S3_BUCKET_STATICS }}"
-          CDN_BUCKET="${{ env.AWS_S3_BUCKET_CDN }}"
-
-          if [ -z "$STATIC_BUCKET" ]; then
-            echo "::error::Variavel AWS_S3_BUCKET_STATICS nao configurada em Repository Variables."
-            exit 1
-          fi
-
-          if echo "$STATIC_BUCKET" | grep -q '^arn:aws:s3:::'; then
-            STATIC_BUCKET="${STATIC_BUCKET#arn:aws:s3:::}"
-            STATIC_BUCKET="${STATIC_BUCKET%/}"
-            echo "::warning::AWS_S3_BUCKET_STATICS foi informado como ARN; usando bucket '$STATIC_BUCKET'."
-            echo "AWS_S3_BUCKET_STATICS=$STATIC_BUCKET" >> $GITHUB_ENV
-          fi
-
-          if [ -n "$CDN_BUCKET" ] && echo "$CDN_BUCKET" | grep -q '^arn:aws:s3:::'; then
-            CDN_BUCKET="${CDN_BUCKET#arn:aws:s3:::}"
-            CDN_BUCKET="${CDN_BUCKET%/}"
-            echo "::warning::AWS_S3_BUCKET_CDN foi informado como ARN; usando bucket '$CDN_BUCKET'."
-            echo "AWS_S3_BUCKET_CDN=$CDN_BUCKET" >> $GITHUB_ENV
-          fi
-
-      - name: Validate S3 permissions (static)
-        run: |
-          set -e
-          STATIC_BUCKET="${{ env.AWS_S3_BUCKET_STATICS }}"
-          TEST_KEY="__deploy_permission_check_$(date +%s).txt"
-          TEST_FILE="/tmp/s3-permission-check.txt"
-
-          echo "permission-check" > "$TEST_FILE"
-
-          set +e
-          LIST_OUTPUT=$(aws s3api list-objects-v2 --bucket "$STATIC_BUCKET" --max-items 1 2>&1)
-          LIST_STATUS=$?
-          set -e
-
-          if [ $LIST_STATUS -ne 0 ]; then
-            if echo "$LIST_OUTPUT" | grep -q "AccessDenied"; then
-              echo "::warning::Sem permissao de ListBucket no bucket static ($STATIC_BUCKET). O deploy seguira em modo sem --delete."
-              echo "HAS_LIST_BUCKET_STATIC=false" >> $GITHUB_ENV
-            else
-              echo "$LIST_OUTPUT"
-              exit $LIST_STATUS
-            fi
-          else
-            echo "HAS_LIST_BUCKET_STATIC=true" >> $GITHUB_ENV
-          fi
-
-          set +e
-          PUT_OUTPUT=$(aws s3 cp "$TEST_FILE" "s3://$STATIC_BUCKET/$TEST_KEY" 2>&1)
-          PUT_STATUS=$?
-          set -e
-
-          if [ $PUT_STATUS -ne 0 ]; then
-            echo "$PUT_OUTPUT"
-            if echo "$PUT_OUTPUT" | grep -q "AccessDenied"; then
-              echo "::error::Sem permissao de PutObject no bucket static ($STATIC_BUCKET)."
-              echo "::error::Conceda s3:PutObject em arn:aws:s3:::$STATIC_BUCKET/* e, se aplicavel, permissoes KMS (kms:Encrypt/kms:Decrypt/kms:GenerateDataKey)."
-            fi
-            exit $PUT_STATUS
-          fi
-
-          set +e
-          DELETE_OUTPUT=$(aws s3api delete-object --bucket "$STATIC_BUCKET" --key "$TEST_KEY" 2>&1)
-          DELETE_STATUS=$?
-          set -e
-
-          if [ $DELETE_STATUS -ne 0 ]; then
-            echo "$DELETE_OUTPUT"
-            if echo "$DELETE_OUTPUT" | grep -q "AccessDenied"; then
-              echo "::error::Sem permissao de DeleteObject no bucket static ($STATIC_BUCKET)."
-              echo "::error::Conceda s3:DeleteObject em arn:aws:s3:::$STATIC_BUCKET/* para permitir deploy com limpeza de objetos antigos."
-            fi
-            exit $DELETE_STATUS
-          fi
-
-      - name: Sync files to S3 static
-        run: |
-          if [ "$HAS_LIST_BUCKET_STATIC" = "true" ]; then
-            aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
-          else
-            echo "::warning::Executando deploy sem --delete por falta de ListBucket."
-            aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --recursive --exclude '.*git*'
-          fi
+          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
 
       - name: Sync files to S3 CDN
+        id: sync-files-to-s3-cdn
         run: |
-          if [ -z "${{ env.AWS_S3_BUCKET_CDN }}" ]; then
-            echo "::warning::Variavel AWS_S3_BUCKET_CDN nao configurada. Etapa de CDN sera ignorada."
-            exit 0
-          fi
-
-          set +e
-          OUTPUT=$(aws s3 cp ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --recursive --exclude '.*git*' 2>&1)
-          STATUS=$?
-          set -e
-
-          if [ $STATUS -ne 0 ]; then
-            echo "$OUTPUT"
-            if echo "$OUTPUT" | grep -q "AccessDenied"; then
-              echo "::warning::Sem permissao para upload no bucket CDN (${{ env.AWS_S3_BUCKET_CDN }}). Deploy do bucket static concluido; etapa CDN ignorada."
-              exit 0
-            fi
-
-            exit $STATUS
-          fi
-
-          echo "$OUTPUT"
+          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --delete --exclude '.*git*'
