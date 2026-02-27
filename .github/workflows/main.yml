@@ -47,7 +47,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Sync files to S3 statics
-        id: sync-files-to-s3-statics
+        id: sync-files-to-s3-statics   
         run: |
           aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
 
