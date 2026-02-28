@@ -11,6 +11,7 @@ interface UploadWidgetUploadItemProps {
 
 export function UploadWidgetUploadItem({ upload} : UploadWidgetUploadItemProps ) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
   const isUploadCompleted = upload.progress >= 100;
 
     useEffect(() => {
@@ -21,6 +22,41 @@ export function UploadWidgetUploadItem({ upload} : UploadWidgetUploadItemProps )
             URL.revokeObjectURL(objectUrl);
         };
     }, [upload.file]);
+
+    function handleDownload() {
+      if (!previewUrl) {
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = previewUrl;
+      link.download = upload.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    async function handleCopyLink() {
+      if (!previewUrl) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(previewUrl);
+      } catch {
+        const textArea = document.createElement("textarea");
+        textArea.value = previewUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+
+      setIsLinkCopied(true);
+      setTimeout(() => {
+        setIsLinkCopied(false);
+      }, 1500);
+    }
 
     return (
         <motion.div 
@@ -64,14 +100,14 @@ export function UploadWidgetUploadItem({ upload} : UploadWidgetUploadItemProps )
            <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
              {isUploadCompleted ? (
                 <>
-                  <Button size="icon-sm">
+                  <Button size="icon-sm" onClick={handleDownload} disabled={!previewUrl}>
                     <Download className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                    <span className="sr-only">Download compressed image</span>
+                    <span className="sr-only">Download file</span>
                   </Button>
 
-                  <Button size="icon-sm">
+                  <Button size="icon-sm" onClick={handleCopyLink} disabled={!previewUrl}>
                     <Link2 className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                    <span className="sr-only">Copy remote URL</span>
+                    <span className="sr-only">{isLinkCopied ? "Link copied" : "Copy file URL"}</span>
                   </Button>
                 </>
               ) : (
