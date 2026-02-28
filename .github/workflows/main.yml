@@ -9,6 +9,7 @@ env:
   AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
   AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-statics-cdn
   SOURCE_DIST: ./dist
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
 
 jobs:
   deploy:
@@ -59,4 +60,4 @@ jobs:
       - name: Invalidate CDN cache
         id: invalidate-cdn-cache
         run: |
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+          aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
