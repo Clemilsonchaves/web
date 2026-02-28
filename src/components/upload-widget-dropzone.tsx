@@ -4,10 +4,18 @@ import CircularProgressBar from "./ui/circular-progress-bar";
 import { useUploads } from "../store/uploads";
 
 export function UploadWidgetDropzone() {
-  const { addUploads } = useUploads();
+  const { addUploads, uploads } = useUploads();
 
-    const isThereAnyUpload = false
-    const uploadGlobalPercentage = 66
+    const uploadsArray = Array.from(uploads.values());
+    const pendingUploads = uploadsArray.filter((upload) => upload.progress < 100);
+    const isThereAnyUpload = pendingUploads.length > 0;
+    const uploadGlobalPercentage =
+      pendingUploads.length > 0
+        ? Math.round(
+            pendingUploads.reduce((accumulator, upload) => accumulator + upload.progress, 0) /
+              pendingUploads.length,
+          )
+        : 0;
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         multiple: true,
@@ -37,7 +45,7 @@ export function UploadWidgetDropzone() {
 
                 <div className="flex flex-col items-center gap-2.5">
                   <CircularProgressBar progress={uploadGlobalPercentage} size={56} strokeWidth={4}/>
-                  <span className="text-xs">Uploading 2 files...</span>
+                  <span className="text-xs">Uploading {pendingUploads.length} file(s)...</span>
                 </div>
 
               ) : (

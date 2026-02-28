@@ -11,6 +11,7 @@ interface UploadWidgetUploadItemProps {
 
 export function UploadWidgetUploadItem({ upload} : UploadWidgetUploadItemProps ) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const isUploadCompleted = upload.progress >= 100;
 
     useEffect(() => {
         const objectUrl = URL.createObjectURL(upload.file);
@@ -51,35 +52,41 @@ export function UploadWidgetUploadItem({ upload} : UploadWidgetUploadItemProps )
                     </span>
                 </span>
                  <div className="size-1 rounded-full bg-zinc-700"/>
-                 <span>45%</span>
+                  <span>{upload.progress}%</span>
             </span>
            </div>
 
            <Progress.Root className="bg-zinc-800 rounded-full h-1 overflow-hidden">
-                <Progress.Indicator className="bg-indigo-700 h-1" style={{ width: "45%" }} />
+                 <Progress.Indicator className="bg-indigo-700 h-1" style={{ width: `${upload.progress}%` }} />
            </Progress.Root>
 
 
            <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
-             <Button size="icon-sm">
-                <Download className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                <span className="sr-only">Download compressed image</span>
-             </Button>
+             {isUploadCompleted ? (
+                <>
+                  <Button size="icon-sm">
+                    <Download className="size-4 text-zinc-300" strokeWidth={1.5}/>
+                    <span className="sr-only">Download compressed image</span>
+                  </Button>
 
-              <Button size="icon-sm">
-                <Link2 className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                <span className="sr-only">Copy remote URL</span>
-             </Button>
+                  <Button size="icon-sm">
+                    <Link2 className="size-4 text-zinc-300" strokeWidth={1.5}/>
+                    <span className="sr-only">Copy remote URL</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="icon-sm">
+                    <RefreshCcw className="size-4 text-zinc-300" strokeWidth={1.5}/>
+                    <span className="sr-only">Retry upload</span>
+                  </Button>
 
-              <Button size="icon-sm">
-                <RefreshCcw className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                <span className="sr-only">Retry upload</span>
-             </Button>
-
-             <Button size="icon-sm">
-                <X className="size-4 text-zinc-300" strokeWidth={1.5}/>
-                <span className="sr-only">Cancel upload</span>
-             </Button>
+                  <Button size="icon-sm">
+                    <X className="size-4 text-zinc-300" strokeWidth={1.5}/>
+                    <span className="sr-only">Cancel upload</span>
+                  </Button>
+                </>
+              )}
            </div>
         </motion.div>
 
