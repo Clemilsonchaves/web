@@ -9,10 +9,8 @@ env:
   # AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
   # AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-statics-cdn
   # SOURCE_DIST: ./dist
-  # CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  
 
 jobs:
   deploy:
