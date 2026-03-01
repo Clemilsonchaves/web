@@ -26,6 +26,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install pnpm
+        id: install-pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
       - name: Install vercel 
         id: install-vercel
         run: |
@@ -45,10 +51,6 @@ jobs:
         id: deploy-app
         run: |
           vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-
-      # - name: Install pnpm
-      #   id: install-pnpm
-      #   uses: pnpm/action-setup@v4
 
       # - name: Install dependencies
       #   id: install-dependencies
