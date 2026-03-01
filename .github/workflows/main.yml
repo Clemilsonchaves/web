@@ -1,4 +1,4 @@
-name: Deploy to s3
+name: Deploy to Vercel
 
 on:
   push:
@@ -6,10 +6,13 @@ on:
       - main
 
 env:
-  AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
-  AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-statics-cdn
-  SOURCE_DIST: ./dist
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  # AWS_S3_BUCKET_STATICS: rocketseat-upload-widget-web-statics
+  # AWS_S3_BUCKET_CDN: rocketseat-upload-widget-web-statics-cdn
+  # SOURCE_DIST: ./dist
+  # CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  
 
 jobs:
   deploy:
@@ -25,39 +28,63 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install pnpm
-        id: install-pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        id: install-dependencies
+      - name: Install vercel 
+        id: install-vercel
         run: |
-          pnpm install --frozen-lockfile
+          npm install --global vercel@latest
+
+      - name: Pull vercel config
+        id: pull-vercel-config
+        run: |
+          vercel pull --yes  --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build app
         id: build-app
         run: |
-          pnpm run build
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Configure AWS credentials
-        id: configure-aws-credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Sync files to S3 statics
-        id: sync-files-to-s3-statics   
+      - name: Deploy app
+        id: deploy-app
         run: |
-          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
+          vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Sync files to S3 CDN
-        id: sync-files-to-s3-cdn
-        run: |
-          aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --delete --exclude '.*git*'
+      # - name: Install pnpm
+      #   id: install-pnpm
+      #   uses: pnpm/action-setup@v4
 
-      - name: Invalidate CDN cache
-        id: invalidate-cdn-cache
-        run: |
-          aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+      # - name: Install dependencies
+      #   id: install-dependencies
+      #   run: |
+      #     pnpm install --frozen-lockfile
+
+      # - name: Build app
+      #   id: build-app
+      #   run: |
+      #     pnpm run build
+
+      # Configura as credenciais e região da AWS para os comandos do AWS CLI abaixo
+      # - name: Configure AWS credentials
+      #   id: configure-aws-credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ vars.AWS_REGION }}
+
+      # Sincroniza o build para o bucket de estáticos e remove arquivos que não existem mais no dist
+      # - name: Sync files to S3 statics
+      #   id: sync-files-to-s3-statics   
+      #   run: |
+      #     aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_STATICS }}/ --delete --exclude '.*git*'
+
+      # Replica os mesmos arquivos no bucket que alimenta o CDN
+      # - name: Sync files to S3 CDN
+      #   id: sync-files-to-s3-cdn
+      #   run: |
+      #     aws s3 sync ${{ env.SOURCE_DIST }} s3://${{ env.AWS_S3_BUCKET_CDN }}/ --delete --exclude '.*git*'
+
+      # Invalida o cache do CloudFront para forçar a entrega da versão mais recente
+      # - name: Invalidate CDN cache
+      #   id: invalidate-cdn-cache
+      #   run: |
+      #     aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
