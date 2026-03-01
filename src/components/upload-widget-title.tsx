@@ -12,7 +12,7 @@ export function UploadWidgetTitle() {
          {isThereAnyPendingUpload ? (
         <span className="flex items-center gap-1">Uploads</span>
          ) : (
-         <span className="text-sm font-medium">Faça upload dos seus arquivos</span>
+         <span className="text-sm font-medium">Faça upload dos seus arquivos.</span>
          )}
         </div>
 
